@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimFarm — Play in Browser</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #111;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #jsdos {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: #111;
+    text-align: center;
+    padding: 1rem;
+  }
+  #overlay h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  #overlay p {
+    max-width: 32rem;
+    color: #aaa;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  #startBtn {
+    font-size: 1rem;
+    padding: 0.7rem 1.6rem;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #startBtn:hover { background: #388e3c; }
+  #startBtn:disabled { background: #555; cursor: default; }
+  #status {
+    color: #888;
+    font-size: 0.85rem;
+    min-height: 1.2em;
+  }
+  #hint {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    text-align: center;
+    color: #666;
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="jsdos"></canvas>
+  <div id="overlay">
+    <h1>SimFarm</h1>
+    <p>
+      This runs the original 1993 DOS release of SimFarm locally in your
+      browser using the js-dos DOSBox-in-WebAssembly emulator. Nothing is
+      uploaded anywhere &mdash; the game runs entirely on this machine.
+    </p>
+    <button id="startBtn">Start Game</button>
+    <div id="status"></div>
+  </div>
+</div>
+<div id="hint">Mouse is captured for gameplay &mdash; press Ctrl+F12 to adjust DOSBox emulation speed, Esc-based menu varies by browser for pointer release.</div>
+<script src="vendor/js-dos/js-dos.js"></script>
+<script>
+  const startBtn = document.getElementById("startBtn");
+  const statusEl = document.getElementById("status");
+  const overlay = document.getElementById("overlay");
+  const canvas = document.getElementById("jsdos");
+
+  function setStatus(msg) {
+    statusEl.textContent = msg;
+  }
+
+  startBtn.addEventListener("click", () => {
+    startBtn.disabled = true;
+    setStatus("Booting DOSBox…");
+
+    Dos(canvas, {
+      wdosboxUrl: "vendor/js-dos/wdosbox.js",
+    }).ready((fs, main) => {
+      setStatus("Loading SimFarm files…");
+      fs.extract("game/simfarm.zip").then(() => {
+        setStatus("Starting SimFarm…");
+        return main(["-c", "cd SimFarm", "-c", "SIMFARM.EXE"]);
+      }).then((ci) => {
+        window.ci = ci;
+        overlay.style.display = "none";
+      }).catch((err) => {
+        console.error(err);
+        setStatus("Failed to start: " + err);
+        startBtn.disabled = false;
+      });
+    }).catch((err) => {
+      console.error(err);
+      setStatus("Failed to initialize DOSBox: " + err);
+      startBtn.disabled = false;
+    });
+  });
+</script>
+</body>
+</html>
